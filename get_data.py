@@ -136,7 +136,6 @@ def data(path1, path2):
     sequence, max_len = read_fasta_lengths(path1)
     esm_feature = pre_feature(feature)
 
-    # 得到节点特征
     datas = []
     for seq in sequence:
         bin_feature = BINARY(seq)
@@ -145,7 +144,7 @@ def data(path1, path2):
         paac_feature = PAAC_embedding(seq)
 
         fea_matrx = np.hstack([bin_feature, blo_feature, zsl_feature])
-        # 补齐到最大长度
+
         if fea_matrx.shape[0] <= max_len:
             zeros = np.zeros((max_len - fea_matrx.shape[0], fea_matrx.shape[1]))
             padded_data = np.vstack((fea_matrx, zeros))

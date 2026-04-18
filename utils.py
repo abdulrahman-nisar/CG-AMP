@@ -10,7 +10,6 @@ def pre_feature(feature):
         data.append(feature1)
     return np.array(data)
 
-# 读取fasta文件
 def read_fasta_lengths(file_path):
     sequence = []
     # seqs = []
@@ -85,11 +84,10 @@ def get_metrics(real_score, predict_score):
     a = [f1_score, accuracy, recall, precision, mcc, roc_auc]  # auc[0, 0], aupr[0, 0],specificity,
     res = [f"{num:.4f}" for num in a]
     return res
-# 获取原始长度
+
 def original_feature(feature, truncated_len):
-    # 初始化结果列表
     feature_truncated = []
-    # 遍历每个二维数组，并根据对应的大小进行截取
+
     for i in range(len(truncated_len)):
         feature1 = feature[i]
         feature2 = feature1.reshape(feature1.shape[1], feature1.shape[2])

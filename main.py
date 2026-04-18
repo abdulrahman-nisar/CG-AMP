@@ -106,7 +106,6 @@ for epoch in tqdm(range(NUM_EPOCHS)):
                                                                           metric_tmp[3], metric_tmp[
                                                                               4], metric_tmp[5]))
         mcc = float(metric_tmp[4])
-        # 保存最佳模型参数
         if mcc > best_mcc:
             best_mcc = mcc
             torch.save(model.state_dict(), "model.pth")

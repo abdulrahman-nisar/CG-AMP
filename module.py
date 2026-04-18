@@ -248,7 +248,7 @@ class TransformerLayer(nn.Module):
         dh = self.dense(h_V)
         h_V = self.norm[1](h_V + self.dropout(dh))
 
-        if mask is not None:  # mask掉padding的节点
+        if mask is not None:
             mask = mask.unsqueeze(-1)
             h_V = mask * h_V
         return h_V

@@ -154,14 +154,11 @@ class PolyLoss(nn.Module):
         self.epsilon = epsilon
 
     def forward(self, predicted, labels):
-        # 计算 BCEWithLogitsLoss
+
         bce = self.BCELoss(predicted, labels)
 
-        # 将预测值通过 sigmoid 函数转换为概率
         pt = predicted
 
-        # 计算多项式项
         poly_term = self.epsilon * (1 - pt)
 
-        # 返回综合损失
         return torch.mean(bce + poly_term)
