@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import torch
 
@@ -128,6 +130,13 @@ def BINARY(seqence):
 
 
 def data(path1, path2):
+    if not os.path.exists(path2):
+        raise FileNotFoundError(
+            f"Missing embedding file: {path2}. "
+            f"This repo does not ship the precomputed ESM2 embeddings. "
+            f"Generate it first, e.g.: python prepare_esm2_embeddings.py --fasta {path1} --out {path2}"
+        )
+
     data_result = np.load(path2, allow_pickle=True)
 
     data_id = data_result[:, 0]
@@ -153,6 +162,7 @@ def data(path1, path2):
 
     labels = data_result[:, 2]
 
+    # Default split sizes for the shipped AMPlify embeddings file.
     Test_NUM = 1669
     Train_NUM = 5842
     Valid_NUM = 835
@@ -162,9 +172,23 @@ def data(path1, path2):
     # Valid_NUM = 708
 
     # permuted_indices = np.arange(SPLIT_NUM, len(data_id)) # 通过设置一个数组存储索引并打乱
-    train_index = np.arange(Test_NUM + Valid_NUM, Train_NUM + Test_NUM + Valid_NUM)
-    valid_index = np.arange(Test_NUM, Test_NUM + Valid_NUM)
-    test_index = np.arange(Test_NUM)
+    n = len(data_id)
+
+    if n == (Train_NUM + Valid_NUM + Test_NUM):
+        # Backward-compatible split.
+        train_index = np.arange(Test_NUM + Valid_NUM, Train_NUM + Test_NUM + Valid_NUM)
+        valid_index = np.arange(Test_NUM, Test_NUM + Valid_NUM)
+        test_index = np.arange(Test_NUM)
+    else:
+        # Generic split for custom datasets: 70% train, 10% valid, 20% test.
+        # (Matches the README description for AMPlify.)
+        rng = np.random.default_rng(126)
+        indices = rng.permutation(n)
+        test_n = int(round(0.2 * n))
+        valid_n = int(round(0.1 * n))
+        test_index = indices[:test_n]
+        valid_index = indices[test_n:test_n + valid_n]
+        train_index = indices[test_n + valid_n:]
 
     train_set = [[esm_feature[i] for i in train_index], datas[train_index], labels[train_index]]
     valid_set = [[esm_feature[i] for i in valid_index], datas[valid_index], labels[valid_index]]

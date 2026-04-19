@@ -18,7 +18,10 @@ class SelfAttention(nn.Module):
         self.w_v = nn.Linear(hid_dim*3, hid_dim*3)
         self.fc = nn.Linear(hid_dim*3, hid_dim*3)
         self.do = nn.Dropout(dropout)
-        self.scale = torch.sqrt(torch.FloatTensor([hid_dim*3 // n_heads])).to(device) # hid_dim//n_heads = 32
+        self.register_buffer(
+            "scale",
+            torch.sqrt(torch.tensor([hid_dim * 3 // n_heads], dtype=torch.float32)),
+        )
 
     def forward(self, query, key, value, mask=None):
 
@@ -75,7 +78,7 @@ class GatedCon(nn.Module):
         self.device = device
 
         # self.pos_embedding = nn.Embedding(1000, hid_dim)
-        self.scale = torch.sqrt(torch.FloatTensor([0.5])).to(device)
+        self.register_buffer("scale", torch.sqrt(torch.tensor([0.5], dtype=torch.float32)))
         self.convs1 = nn.ModuleList(
             [nn.Conv1d(hid_dim, 2 * hid_dim, kernel_size, padding=(kernel_size - 1) // 2) for _ in
              range(self.n_layers)])  # convolutional layers1

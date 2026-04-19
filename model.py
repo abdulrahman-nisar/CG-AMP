@@ -1,5 +1,4 @@
 import torch
-from torch_geometric.nn import global_max_pool
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -13,10 +12,10 @@ class newModel(nn.Module):
         super().__init__()
         self.aa = nn.Linear(1280, 512)
         self.LN = nn.LayerNorm(512)
-        # self.pool = global_max_pool
-        self.pool = nn.MaxPool1d(kernel_size=183)
+        # Global max pooling over sequence length.
+        self.pool = nn.AdaptiveMaxPool1d(1)
         self.self_att = Attention(512)   # 45
-        self.cnn = GatedCon(45, 256, 3, 3, 0.1, 'cuda')
+        self.cnn = GatedCon(45, 256, 3, 3, 0.1, 'cuda' if torch.cuda.is_available() else 'cpu')
         # self.po = PositionwiseFeedforward(512)
         self.atte_fusion = nn.MultiheadAttention(64, 4)
         self.line_fusion = nn.Linear(128, 64)

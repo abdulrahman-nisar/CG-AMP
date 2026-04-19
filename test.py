@@ -8,9 +8,11 @@ from utils import get_metrics
 
 BATCH_SIZE = 32
 def test(test_loader):
-    model = newModel().to('cuda')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = newModel().to(device)
 
-    model.load_state_dict(torch.load("model.pth"))
+    # Backward compatible with older checkpoints that don't include new buffers.
+    model.load_state_dict(torch.load("model.pth", map_location=device), strict=False)
     model.eval()
     y_pred_all = []
     real_all = []
@@ -31,7 +33,8 @@ def test(test_loader):
                                                                           metric_tmp[3], metric_tmp[
                                                                               4], metric_tmp[5]))
 																			  
-_, _, test_set = data('dataset/AMPlify/AMPlify.fasta', 'dataset/AMPlify/amplify_esm2.npy')
-test_dataset = MyDataset(test_set)
-test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate_fn2)
-test(test_loader)
+if __name__ == "__main__":
+    _, _, test_set = data('dataset/AMPlify/AMPlify.fasta', 'dataset/AMPlify/amplify_esm2.npy')
+    test_dataset = MyDataset(test_set)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate_fn2)
+    test(test_loader)
