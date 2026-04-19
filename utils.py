@@ -1,23 +1,41 @@
 import numpy as np
 from Bio import SeqIO
 from sklearn.metrics import roc_auc_score
+import torch
+import os
 
 
-def pre_feature(feature):
+def set_seed(seed):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+    torch.use_deterministic_algorithms(True, warn_only=True)
+
+    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+
+
+def normalise_feature(feature):
     # ESM embeddings can be variable-length per sequence.
     # NumPy 2.x raises on ragged arrays unless dtype=object is explicit.
     return np.asarray(list(feature), dtype=object)
 
-def read_fasta_lengths(file_path):
-    sequence = []
+def get_sequences_and_max_sequence_length(file_path):
+    sequences = []
     # seqs = []
     max_len = 0
     for record in SeqIO.parse(file_path, "fasta"):
         seq_len = len(record.seq)
         if seq_len > max_len:
             max_len = seq_len
-        sequence.append(str(record.seq))
-    return np.array(sequence), max_len#, seqs
+        sequences.append(str(record.seq))
+    return np.array(sequences), max_len#, seqs
 
 
 def get_metrics(real_score, predict_score):

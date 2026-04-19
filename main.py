@@ -15,19 +15,12 @@ from tqdm import tqdm
 import warnings
 from torch.utils.data import DataLoader
 
+
+
 warnings.filterwarnings("ignore")
 
 seed = 126  # 42
-np.random.seed(seed)
-torch.manual_seed(seed)
-if torch.cuda.is_available():
-    torch.cuda.manual_seed_all(seed)
-    torch.cuda.manual_seed(seed)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
-torch.use_deterministic_algorithms(True, warn_only=True)
-# torch.use_deterministic_algorithms(True)
-os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
+set_seed(seed)
 
 HIDDEN_UNITS = 10
 NUM_HEADS = 6
@@ -38,10 +31,6 @@ LEARNING_RATE = 0.001
 protein_in_dim = 1280
 protein_out_dim = 128
 k = 0.96
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(device)
-
 
 train_set, valid_set, test_set = data('dataset/AMPlify/AMPlify.fasta', 'dataset/AMPlify/amplify_esm2.npy')
 # train_set, valid_set, test_set = data('dataset/AMPScanner/AMPScanner.fasta', 'dataset/AMPScanner/ampscanner_esm2.npy')
@@ -54,6 +43,8 @@ train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, co
 valid_loader = DataLoader(valid_dataset, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate_fn2)
 test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate_fn2)
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(device)
 model = newModel().to(device)
 optimizer = optim.AdamW(model.parameters(), LEARNING_RATE)
 contrastive_loss_fn = ContrastiveLoss()

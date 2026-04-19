@@ -3,7 +3,7 @@ import os
 import numpy as np
 import torch
 
-from utils import read_fasta_lengths, pre_feature
+from utils import get_sequences_and_max_sequence_length, normalise_feature
 
 
 def PAAC_embedding(sequence):
@@ -129,35 +129,38 @@ def BINARY(seqence):
 
 
 
-def data(path1, path2):
-    if not os.path.exists(path2):
+def data(fasta_file_path, npy_file_path):
+    if not os.path.exists(npy_file_path):
         raise FileNotFoundError(
-            f"Missing embedding file: {path2}. "
+            f"Missing embedding file: {npy_file_path}. "
             f"This repo does not ship the precomputed ESM2 embeddings. "
-            f"Generate it first, e.g.: python prepare_esm2_embeddings.py --fasta {path1} --out {path2}"
+            f"Generate it first, e.g.: python prepare_esm2_embeddings.py --fasta {fasta_file_path} --out {npy_file_path}"
         )
 
-    data_result = np.load(path2, allow_pickle=True)
+    data_result = np.load(npy_file_path, allow_pickle=True)
 
     data_id = data_result[:, 0]
     feature = data_result[:, 1]
 
-    sequence, max_len = read_fasta_lengths(path1)
-    esm_feature = pre_feature(feature)
+    sequences, max_sequence_length = get_sequences_and_max_sequence_length(fasta_file_path)
+    esm_feature = normalise_feature(feature)
+
+
 
     datas = []
-    for seq in sequence:
-        bin_feature = BINARY(seq)
-        blo_feature = BLOSUM62(seq)
-        zsl_feature = ZSCALE(seq)
-        paac_feature = PAAC_embedding(seq)
+    for sequence in sequences:
+        bin_feature = BINARY(sequence)
+        blo_feature = BLOSUM62(sequence)
+        zsl_feature = ZSCALE(sequence)
+        paac_feature = PAAC_embedding(sequence)
 
-        fea_matrx = np.hstack([bin_feature, blo_feature, zsl_feature])
+        feature_matrix = np.hstack([bin_feature, blo_feature, zsl_feature])
 
-        if fea_matrx.shape[0] <= max_len:
-            zeros = np.zeros((max_len - fea_matrx.shape[0], fea_matrx.shape[1]))
-            padded_data = np.vstack((fea_matrx, zeros))
+        if feature_matrix.shape[0] <= max_sequence_length:
+            zeros = np.zeros((max_sequence_length - feature_matrix.shape[0], feature_matrix.shape[1]))
+            padded_data = np.vstack((feature_matrix, zeros))
         datas.append(padded_data.astype(np.float32))
+
     datas = np.array(datas)
 
     labels = data_result[:, 2]
