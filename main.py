@@ -47,10 +47,15 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
 model = newModel().to(device)
 optimizer = optim.AdamW(model.parameters(), LEARNING_RATE)
+lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer, mode="max", factor=0.5, patience=3, min_lr=1e-6
+)
 contrastive_loss_fn = ContrastiveLoss()
 cross_entropy_loss_fn = nn.BCELoss(reduction='none')
 # cross_entropy_loss_fn = PolyLoss()
-best_mcc = 0
+best_mcc = -1.0
+early_stop_patience = 10
+no_improve_epochs = 0
 for epoch in tqdm(range(NUM_EPOCHS)):
     loss_all = 0
     y = []
@@ -97,13 +102,17 @@ for epoch in tqdm(range(NUM_EPOCHS)):
                                                                           metric_tmp[3], metric_tmp[
                                                                               4], metric_tmp[5]))
         mcc = float(metric_tmp[4])
+        lr_scheduler.step(mcc)
         if mcc > best_mcc:
             best_mcc = mcc
             torch.save(model.state_dict(), "model.pth")
+            no_improve_epochs = 0
+        else:
+            no_improve_epochs += 1
+            if no_improve_epochs >= early_stop_patience:
+                print(
+                    f"Early stopping at epoch {epoch + 1} (best MCC: {best_mcc:.4f})."
+                )
+                break
 
 test(test_loader)
-
-
-
-
-

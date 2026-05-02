@@ -87,8 +87,8 @@ class newModel(nn.Module):
         features1 = features1.squeeze(1)
         esm = self.input_block(features1)
 
-        # for t in self.encoder_layers:
-        #     esm = t(esm)
+        for t in self.encoder_layers:
+            esm = t(esm)
         esm = esm.permute(0, 2, 1)  # (batch, len, dim  ->  batch, dim, len)
         esm = self.pool(esm)
         esm = esm.permute(0, 2, 1)  # (batch, dim, 1  ->  batch, 1, dim)
