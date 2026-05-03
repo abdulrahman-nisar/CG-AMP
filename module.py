@@ -162,6 +162,21 @@ class Attention(nn.Module):
         return self.to_out(out)#, attn
 
 
+class AttentivePooling(nn.Module):
+    def __init__(self, dim, dropout=0.0):
+        super().__init__()
+        self.score = nn.Linear(dim, 1)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, mask=None):
+        # x: [batch, len, dim]
+        scores = self.score(self.dropout(x)).squeeze(-1)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, -1e9)
+        weights = torch.softmax(scores, dim=-1)
+        return torch.sum(x * weights.unsqueeze(-1), dim=1)
+
+
 class PositionwiseFeedforward(nn.Module):
     def __init__(self, hid_dim, pf_dim, dropout):
         super().__init__()

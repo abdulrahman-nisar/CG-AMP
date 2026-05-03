@@ -28,6 +28,11 @@ NUM_LAYERS = 1
 BATCH_SIZE = 32
 NUM_EPOCHS = 50
 LEARNING_RATE = 0.001
+LR_SCHEDULER_PATIENCE = 3
+LR_SCHEDULER_FACTOR = 0.5
+LR_SCHEDULER_THRESHOLD = 1e-4
+EARLY_STOPPING_PATIENCE = 10
+EARLY_STOPPING_MIN_DELTA = 1e-4
 protein_in_dim = 1280
 protein_out_dim = 128
 k = 0.96
@@ -47,10 +52,18 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
 model = newModel().to(device)
 optimizer = optim.AdamW(model.parameters(), LEARNING_RATE)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer,
+    mode='max',
+    factor=LR_SCHEDULER_FACTOR,
+    patience=LR_SCHEDULER_PATIENCE,
+    threshold=LR_SCHEDULER_THRESHOLD,
+)
 contrastive_loss_fn = ContrastiveLoss()
 cross_entropy_loss_fn = nn.BCELoss(reduction='none')
 # cross_entropy_loss_fn = PolyLoss()
-best_mcc = 0
+best_mcc = -1.0
+bad_epochs = 0
 for epoch in tqdm(range(NUM_EPOCHS)):
     loss_all = 0
     y = []
@@ -97,9 +110,18 @@ for epoch in tqdm(range(NUM_EPOCHS)):
                                                                           metric_tmp[3], metric_tmp[
                                                                               4], metric_tmp[5]))
         mcc = float(metric_tmp[4])
-        if mcc > best_mcc:
+        scheduler.step(mcc)
+        if mcc > best_mcc + EARLY_STOPPING_MIN_DELTA:
             best_mcc = mcc
+            bad_epochs = 0
             torch.save(model.state_dict(), "model.pth")
+        else:
+            bad_epochs += 1
+            if bad_epochs >= EARLY_STOPPING_PATIENCE:
+                print(
+                    f"Early stopping: MCC has not improved for {EARLY_STOPPING_PATIENCE} epochs. Best MCC: {best_mcc:.4f}"
+                )
+                break
 
 test(test_loader)
 

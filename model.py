@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from module import TransformerLayer, GatedCon, SelfAttention, Attention
+from module import TransformerLayer, GatedCon, SelfAttention, Attention, AttentivePooling
 
 
 
@@ -12,8 +12,8 @@ class newModel(nn.Module):
         super().__init__()
         self.aa = nn.Linear(1280, 512)
         self.LN = nn.LayerNorm(512)
-        # Global max pooling over sequence length.
-        self.pool = nn.AdaptiveMaxPool1d(1)
+        self.esm_pool = AttentivePooling(512, dropout=0.1)
+        self.x_pool = AttentivePooling(768, dropout=0.1)
         self.self_att = Attention(512)   # 45
         self.cnn = GatedCon(45, 256, 3, 3, 0.1, 'cuda' if torch.cuda.is_available() else 'cpu')
         # self.po = PositionwiseFeedforward(512)
@@ -69,6 +69,10 @@ class newModel(nn.Module):
             TransformerLayer(512, 4, 0.3)  # 45,1,0.3
             for _ in range(2)
         ])
+        self.encoder_layers_x = nn.ModuleList([
+            TransformerLayer(768, 4, 0.3)
+            for _ in range(2)
+        ])
 
         self.readout = nn.Sequential(
             nn.LayerNorm(512, eps=1e-6),
@@ -87,18 +91,15 @@ class newModel(nn.Module):
         features1 = features1.squeeze(1)
         esm = self.input_block(features1)
 
-        # for t in self.encoder_layers:
-        #     esm = t(esm)
-        esm = esm.permute(0, 2, 1)  # (batch, len, dim  ->  batch, dim, len)
-        esm = self.pool(esm)
-        esm = esm.permute(0, 2, 1)  # (batch, dim, 1  ->  batch, 1, dim)
-        esm = esm.view(esm.size(0), -1)
+        for t in self.encoder_layers:
+            esm = t(esm)
+        esm = self.esm_pool(esm)
         esm = self.readout(esm)
         x = features2
         x = self.cnn(x)
         # x = self.selfa_att(x)
-        # for t in self.encoder_layers:
-        #     x = t(x)
+        for t in self.encoder_layers_x:
+            x = t(x)
         # x = x.unsqueeze(1)
         # x = [F.relu(conv(x)) for conv in self.convs]
         # x = [F.max_pool2d(input=x_item, kernel_size=(x_item.size(2), x_item.size(3))) for x_item in x]
@@ -106,14 +107,7 @@ class newModel(nn.Module):
         # x = [x_item.view(x_item.size(0), -1) for x_item in x]
         # x = torch.cat(x, 1)
 
-
-        # for t in self.encoder_layers:
-        #     x = t(x)
-
-        x = x.permute(0, 2, 1)   # (batch, len, dim  ->  batch, dim, len)
-        x = self.pool(x)
-        x = x.permute(0, 2, 1)  # (batch, dim, 1  ->  batch, 1, dim)
-        x = x.view(x.size(0), -1)
+        x = self.x_pool(x)
 
         # # Pass through LSTM
         # x = x.view(x.size(0), 1, -1)  # (batch_size, seq_len, features)
