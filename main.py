@@ -124,8 +124,3 @@ for epoch in tqdm(range(NUM_EPOCHS)):
                 break
 
 test(test_loader)
-
-
-
-
-
